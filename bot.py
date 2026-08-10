@@ -32,7 +32,9 @@ if _admin_ids_env:
 else:
     ADMIN_IDS = [123456789]  # নিজের PC-তে চালালে এখানে সরাসরি নিজের ID বসান
 
-DB_FILE = "reports.db"
+# DB ফাইলের পাথ environment variable থেকে নেবে (Railway Volume-এর জন্য),
+# না পেলে বর্তমান ফোল্ডারে reports.db ব্যবহার করবে (নিজের PC-তে চালানোর জন্য)
+DB_FILE = os.environ.get("DB_FILE", "reports.db")
 # ======================================================
 
 logging.basicConfig(
