@@ -74,7 +74,7 @@ def welcome_text(user_id: int) -> str:
         "স্বাগতম! এই বট দিয়ে Vendor ও Buyer দিলে রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
         "📌 কমান্ড তালিকা:\n"
         "/find <vendor> | <buyer> - রিপোর্ট নাম্বার খুঁজুন\n"
-        "উদাহরণ: /find ABC Textiles | XYZ Buyer Ltd\n"
+        "উদাহরণ: /find ABC Textiles Ltd | XYZ Buyer \n"
     )
     if is_admin(user_id):
         text += (
