@@ -17,8 +17,19 @@ from telegram.ext import (
 )
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8860673369:AAG_rOSkjzljf0nxSMQsSx5Ms0u0e2u9gTA"      # @BotFather থেকে পাওয়া টোকেন বসান
-ADMIN_IDS = [1621149302]                 # @userinfobot থেকে পাওয়া আপনার Telegram ID বসান (একাধিক হলে কমা দিয়ে যোগ করুন)
+import os
+
+# আগে environment variable থেকে নেওয়ার চেষ্টা করবে (Railway-এর জন্য),
+# না পেলে নিচের ডিফল্ট মান ব্যবহার করবে (নিজের PC-তে চালানোর জন্য)
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+
+_admin_ids_env = os.environ.get("ADMIN_IDS", "")
+if _admin_ids_env:
+    # Railway Variables-এ ADMIN_IDS = 123456789,987654321 এভাবে দিলে এটা পার্স করবে
+    ADMIN_IDS = [int(x.strip()) for x in _admin_ids_env.split(",") if x.strip()]
+else:
+    ADMIN_IDS = [123456789]  # নিজের PC-তে চালালে এখানে সরাসরি নিজের ID বসান
+
 DB_FILE = "reports.db"
 # ======================================================
 
