@@ -13,7 +13,9 @@ from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
+    MessageHandler,
     ContextTypes,
+    filters,
 )
 
 # ==================== কনফিগারেশন ====================
@@ -64,19 +66,31 @@ def is_admin(user_id: int) -> bool:
 
 # ==================== কমান্ড হ্যান্ডলার ====================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def welcome_text(user_id: int) -> str:
+    """স্বাগত মেসেজ ও ব্যবহারবিধি তৈরি করে"""
     text = (
         "স্বাগতম! এই বট দিয়ে Vendor ও Buyer দিলে রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
         "📌 কমান্ড তালিকা:\n"
         "/find <vendor> | <buyer> - রিপোর্ট নাম্বার খুঁজুন\n"
+        "উদাহরণ: /find ABC Textiles | XYZ Buyer Ltd\n"
     )
-    if is_admin(update.effective_user.id):
+    if is_admin(user_id):
         text += (
-            "/add <vendor> | <buyer> | <report_number> - নতুন এন্ট্রি যোগ করুন (শুধু এডমিন)\n"
-            "/delete <id> - এন্ট্রি মুছুন (শুধু এডমিন)\n"
-            "/list - সব এন্ট্রি দেখুন (শুধু এডমিন)\n"
+            "\n👤 এডমিন কমান্ড:\n"
+            "/add <vendor> | <buyer> | <report_number> - নতুন এন্ট্রি যোগ করুন\n"
+            "/delete <id> - এন্ট্রি মুছুন\n"
+            "/list - সব এন্ট্রি দেখুন\n"
         )
-    await update.message.reply_text(text)
+    return text
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(welcome_text(update.effective_user.id))
+
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/find, /add ইত্যাদি ছাড়া অন্য যেকোনো লেখা (যেমন 'hi') পাঠালে স্বাগত মেসেজ দেখাবে"""
+    await update.message.reply_text(welcome_text(update.effective_user.id))
 
 
 async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -218,6 +232,8 @@ def main():
     app.add_handler(CommandHandler("add", add_report))
     app.add_handler(CommandHandler("delete", delete_report))
     app.add_handler(CommandHandler("list", list_reports))
+    # কমান্ড নয় এমন যেকোনো লেখা (যেমন "hi", "hello") এলে স্বাগত মেসেজ দেখাবে
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     logger.info("বট চালু হয়েছে...")
     app.run_polling()
