@@ -83,7 +83,7 @@ def welcome_text(user_id: int) -> str:
         "<code>/find vendor | buyer</code>\n"
         "উদাহরণ:\n<code>/find ABC Textiles | XYZ Buyer</code>\n\n"
         "2️⃣ <b>শুধু Buyer দিয়ে খোঁজা</b> (vendor অনুযায়ী ভাগ করে দেখাবে)\n"
-        "<code>/buyer buyer name</code>\n"
+        "<code>/b buyer name</code>\n"
         "উদাহরণ:\n<code>/buyer XYZ Buyer</code>\n\n"
         "3️⃣ <b>রিপোর্ট নাম্বার দিয়ে ID খোঁজা</b>\n"
         "<code>/number report number</code>\n"
@@ -378,7 +378,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("find", find_report))
-    app.add_handler(CommandHandler("buyer", find_by_buyer))
+    app.add_handler(CommandHandler("b", find_by_buyer))
     app.add_handler(CommandHandler("number", find_by_number))
     app.add_handler(CommandHandler("add", add_report))
     app.add_handler(CommandHandler("edit", edit_report))
