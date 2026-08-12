@@ -69,61 +69,54 @@ def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
 
-def esc(text: str) -> str:
-    """Markdown-এ ভাঙন এড়াতে ইউজার-ইনপুট escape করা"""
-    for ch in ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]:
-        text = text.replace(ch, "\\" + ch)
-    return text
-
-
 # ==================== হেল্প / স্বাগত মেসেজ ====================
 
 def welcome_text(user_id: int) -> str:
-    """সুন্দরভাবে সাজানো স্বাগত মেসেজ ও ব্যবহারবিধি"""
+    """সুন্দরভাবে সাজানো স্বাগত মেসেজ ও ব্যবহারবিধি (HTML ফরম্যাট)"""
     text = (
-        "👋 *স্বাগতম\\!*\n"
+        "👋 <b>স্বাগতম!</b>\n"
         "এই বট দিয়ে Vendor ও Buyer-এর রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
         "━━━━━━━━━━━━━━━\n"
-        "🔎 *সবার জন্য কমান্ড*\n"
+        "🔎 <b>সবার জন্য কমান্ড</b>\n"
         "━━━━━━━━━━━━━━━\n\n"
-        "1️⃣ *Vendor \\+ Buyer দিয়ে খোঁজা*\n"
-        "`/find <vendor> | <buyer>`\n"
-        "উদাহরণ:\n`/find ABC Textiles | XYZ Buyer`\n\n"
-        "2️⃣ *শুধু Buyer দিয়ে খোঁজা* \\(vendor অনুযায়ী ভাগ করে দেখাবে\\)\n"
-        "`/buyer <buyer name>`\n"
-        "উদাহরণ:\n`/buyer XYZ Buyer`\n\n"
-        "3️⃣ *রিপোর্ট নাম্বার দিয়ে ID খোঁজা*\n"
-        "`/number <report number>`\n"
-        "উদাহরণ:\n`/number INT\\-2026\\-00123`\n"
+        "1️⃣ <b>Vendor + Buyer দিয়ে খোঁজা</b>\n"
+        "<code>/find vendor | buyer</code>\n"
+        "উদাহরণ:\n<code>/find ABC Textiles | XYZ Buyer</code>\n\n"
+        "2️⃣ <b>শুধু Buyer দিয়ে খোঁজা</b> (vendor অনুযায়ী ভাগ করে দেখাবে)\n"
+        "<code>/buyer buyer name</code>\n"
+        "উদাহরণ:\n<code>/buyer XYZ Buyer</code>\n\n"
+        "3️⃣ <b>রিপোর্ট নাম্বার দিয়ে ID খোঁজা</b>\n"
+        "<code>/number report number</code>\n"
+        "উদাহরণ:\n<code>/number INT-2026-00123</code>\n"
     )
     if is_admin(user_id):
         text += (
             "\n━━━━━━━━━━━━━━━\n"
-            "👤 *শুধু এডমিনের জন্য*\n"
+            "👤 <b>শুধু এডমিনের জন্য</b>\n"
             "━━━━━━━━━━━━━━━\n\n"
-            "4️⃣ *নতুন এন্ট্রি যোগ করা*\n"
-            "`/add <vendor> | <buyer> | <report number>`\n\n"
-            "5️⃣ *এন্ট্রি এডিট করা* \\(নতুন রিপোর্ট নাম্বার বসানো\\)\n"
-            "`/edit <id> | <new report number>`\n"
-            "উদাহরণ:\n`/edit 5 | INT\\-2026\\-00999`\n\n"
-            "6️⃣ *এন্ট্রি ডিলিট করা*\n"
-            "`/delete <id>`\n\n"
-            "7️⃣ *সব এন্ট্রি দেখা*\n"
-            "`/list`\n"
+            "4️⃣ <b>নতুন এন্ট্রি যোগ করা</b>\n"
+            "<code>/add vendor | buyer | report number</code>\n\n"
+            "5️⃣ <b>এন্ট্রি এডিট করা</b> (নতুন রিপোর্ট নাম্বার বসানো)\n"
+            "<code>/edit id | new report number</code>\n"
+            "উদাহরণ:\n<code>/edit 5 | INT-2026-00999</code>\n\n"
+            "6️⃣ <b>এন্ট্রি ডিলিট করা</b>\n"
+            "<code>/delete id</code>\n\n"
+            "7️⃣ <b>সব এন্ট্রি দেখা</b>\n"
+            "<code>/list</code>\n"
         )
     return text
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        welcome_text(update.effective_user.id), parse_mode=ParseMode.MARKDOWN_V2
+        welcome_text(update.effective_user.id), parse_mode=ParseMode.HTML
     )
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/find, /add ইত্যাদি ছাড়া অন্য যেকোনো লেখা (যেমন 'hi') পাঠালে স্বাগত মেসেজ দেখাবে"""
     await update.message.reply_text(
-        welcome_text(update.effective_user.id), parse_mode=ParseMode.MARKDOWN_V2
+        welcome_text(update.effective_user.id), parse_mode=ParseMode.HTML
     )
 
 
