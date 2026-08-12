@@ -1,15 +1,20 @@
 """
 Telegram Bot - Vendor/Buyer Report Number Tracker
 --------------------------------------------------
-- যেকোনো ইউজার /find কমান্ড দিয়ে vendor ও buyer লিখলে সংশ্লিষ্ট রিপোর্ট নাম্বার(গুলো) পাবে
-- শুধুমাত্র ADMIN_IDS তালিকায় থাকা Telegram ID /add এবং /delete ব্যবহার করতে পারবে
+- /find      : vendor + buyer দিয়ে সরাসরি রিপোর্ট নাম্বার খোঁজা
+- /buyer     : শুধু buyer দিয়ে খুঁজলে vendor অনুযায়ী ভাগ করে দেখাবে
+- /number    : একটা রিপোর্ট নাম্বার দিলে তার ID ও ভেন্ডর/বায়ার দেখাবে
+- /edit      : (শুধু এডমিন) নির্দিষ্ট ID-এর রিপোর্ট নাম্বার এডিট করা
+- /add /delete /list : (শুধু এডমিন) এন্ট্রি ম্যানেজমেন্ট
 - ডেটা SQLite ফাইলে (reports.db) সেভ থাকে, বট বন্ধ করলেও হারায় না
 """
 
+import os
 import sqlite3
 import logging
 import asyncio
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -19,8 +24,6 @@ from telegram.ext import (
 )
 
 # ==================== কনফিগারেশন ====================
-import os
-
 # আগে environment variable থেকে নেওয়ার চেষ্টা করবে (Railway-এর জন্য),
 # না পেলে নিচের ডিফল্ট মান ব্যবহার করবে (নিজের PC-তে চালানোর জন্য)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
@@ -66,34 +69,65 @@ def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
 
-# ==================== কমান্ড হ্যান্ডলার ====================
+def esc(text: str) -> str:
+    """Markdown-এ ভাঙন এড়াতে ইউজার-ইনপুট escape করা"""
+    for ch in ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]:
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
+# ==================== হেল্প / স্বাগত মেসেজ ====================
 
 def welcome_text(user_id: int) -> str:
-    """স্বাগত মেসেজ ও ব্যবহারবিধি তৈরি করে"""
+    """সুন্দরভাবে সাজানো স্বাগত মেসেজ ও ব্যবহারবিধি"""
     text = (
-        "স্বাগতম! এই বট দিয়ে Vendor ও Buyer দিলে রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
-        "📌 কমান্ড তালিকা:\n"
-        "/find <vendor> | <buyer> - রিপোর্ট নাম্বার খুঁজুন\n"
-        "উদাহরণ: /find ABC Textiles Ltd | XYZ Buyer \n"
+        "👋 *স্বাগতম\\!*\n"
+        "এই বট দিয়ে Vendor ও Buyer-এর রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
+        "━━━━━━━━━━━━━━━\n"
+        "🔎 *সবার জন্য কমান্ড*\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "1️⃣ *Vendor \\+ Buyer দিয়ে খোঁজা*\n"
+        "`/find <vendor> | <buyer>`\n"
+        "উদাহরণ:\n`/find ABC Textiles | XYZ Buyer`\n\n"
+        "2️⃣ *শুধু Buyer দিয়ে খোঁজা* \\(vendor অনুযায়ী ভাগ করে দেখাবে\\)\n"
+        "`/buyer <buyer name>`\n"
+        "উদাহরণ:\n`/buyer XYZ Buyer`\n\n"
+        "3️⃣ *রিপোর্ট নাম্বার দিয়ে ID খোঁজা*\n"
+        "`/number <report number>`\n"
+        "উদাহরণ:\n`/number INT\\-2026\\-00123`\n"
     )
     if is_admin(user_id):
         text += (
-            "\n👤 এডমিন কমান্ড:\n"
-            "/add <vendor> | <buyer> | <report_number> - নতুন এন্ট্রি যোগ করুন\n"
-            "/delete <id> - এন্ট্রি মুছুন\n"
-            "/list - সব এন্ট্রি দেখুন\n"
+            "\n━━━━━━━━━━━━━━━\n"
+            "👤 *শুধু এডমিনের জন্য*\n"
+            "━━━━━━━━━━━━━━━\n\n"
+            "4️⃣ *নতুন এন্ট্রি যোগ করা*\n"
+            "`/add <vendor> | <buyer> | <report number>`\n\n"
+            "5️⃣ *এন্ট্রি এডিট করা* \\(নতুন রিপোর্ট নাম্বার বসানো\\)\n"
+            "`/edit <id> | <new report number>`\n"
+            "উদাহরণ:\n`/edit 5 | INT\\-2026\\-00999`\n\n"
+            "6️⃣ *এন্ট্রি ডিলিট করা*\n"
+            "`/delete <id>`\n\n"
+            "7️⃣ *সব এন্ট্রি দেখা*\n"
+            "`/list`\n"
         )
     return text
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(welcome_text(update.effective_user.id))
+    await update.message.reply_text(
+        welcome_text(update.effective_user.id), parse_mode=ParseMode.MARKDOWN_V2
+    )
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/find, /add ইত্যাদি ছাড়া অন্য যেকোনো লেখা (যেমন 'hi') পাঠালে স্বাগত মেসেজ দেখাবে"""
-    await update.message.reply_text(welcome_text(update.effective_user.id))
+    await update.message.reply_text(
+        welcome_text(update.effective_user.id), parse_mode=ParseMode.MARKDOWN_V2
+    )
 
+
+# ==================== ১. Vendor + Buyer দিয়ে খোঁজা ====================
 
 async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """সবাই ব্যবহার করতে পারবে: /find vendor | buyer"""
@@ -133,6 +167,84 @@ async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+# ==================== ২. শুধু Buyer দিয়ে খোঁজা (vendor-wise ভাগ করে) ====================
+
+async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """সবাই ব্যবহার করতে পারবে: /buyer <buyer name>"""
+    buyer = " ".join(context.args).strip()
+    if not buyer:
+        await update.message.reply_text(
+            "সঠিক ফরম্যাটে লিখুন:\n/buyer <buyer name>\n\nউদাহরণ:\n/buyer XYZ Buyer Ltd"
+        )
+        return
+
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT vendor, report_number FROM reports
+        WHERE LOWER(buyer) = LOWER(?)
+        ORDER BY vendor
+        """,
+        (buyer,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        await update.message.reply_text(f"❌ এই Buyer-এর কোনো এন্ট্রি পাওয়া যায়নি।\nBuyer: {buyer}")
+        return
+
+    # vendor অনুযায়ী গ্রুপ করা
+    grouped = {}
+    for vendor, report_number in rows:
+        grouped.setdefault(vendor, []).append(report_number)
+
+    lines = [f"✅ Buyer: {buyer}\n"]
+    for vendor, numbers in grouped.items():
+        lines.append(f"\n🏭 Vendor: {vendor}")
+        for num in numbers:
+            lines.append(f"   • {num}")
+
+    await update.message.reply_text("\n".join(lines))
+
+
+# ==================== ৩. রিপোর্ট নাম্বার দিয়ে ID খোঁজা ====================
+
+async def find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """সবাই ব্যবহার করতে পারবে: /number <report number>"""
+    report_number = " ".join(context.args).strip()
+    if not report_number:
+        await update.message.reply_text(
+            "সঠিক ফরম্যাটে লিখুন:\n/number <report number>\n\nউদাহরণ:\n/number INT-2026-00123"
+        )
+        return
+
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, vendor, buyer FROM reports
+        WHERE LOWER(report_number) = LOWER(?)
+        """,
+        (report_number,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        await update.message.reply_text(f"❌ এই রিপোর্ট নাম্বার খুঁজে পাওয়া যায়নি।\nReport #: {report_number}")
+        return
+
+    lines = [f"✅ Report #: {report_number}\n"]
+    for entry_id, vendor, buyer in rows:
+        lines.append(f"\n🆔 ID: {entry_id}\nVendor: {vendor}\nBuyer: {buyer}")
+
+    await update.message.reply_text("\n".join(lines))
+
+
+# ==================== এডমিন কমান্ড ====================
+
 async def add_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """শুধু এডমিন: /add vendor | buyer | report_number"""
     if not is_admin(update.effective_user.id):
@@ -161,6 +273,48 @@ async def add_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"✅ যোগ করা হয়েছে (ID: {new_id})\nVendor: {vendor}\nBuyer: {buyer}\nReport #: {report_number}"
+    )
+
+
+async def edit_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """শুধু এডমিন: /edit <id> | <new_report_number>"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ এই কমান্ড শুধুমাত্র এডমিনের জন্য।")
+        return
+
+    raw = " ".join(context.args)
+    parts = [p.strip() for p in raw.split("|")]
+    if len(parts) != 2 or not all(parts) or not parts[0].isdigit():
+        await update.message.reply_text(
+            "সঠিক ফরম্যাটে লিখুন:\n/edit <id> | <new_report_number>\n\n"
+            "উদাহরণ:\n/edit 5 | INT-2026-00999\n\n"
+            "(ID জানতে /list অথবা /number ব্যবহার করুন)"
+        )
+        return
+
+    entry_id = int(parts[0])
+    new_report_number = parts[1]
+
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT vendor, buyer, report_number FROM reports WHERE id = ?", (entry_id,))
+    row = cur.fetchone()
+
+    if not row:
+        await update.message.reply_text(f"❌ ID {entry_id} খুঁজে পাওয়া যায়নি।")
+        conn.close()
+        return
+
+    old_number = row[2]
+    cur.execute("UPDATE reports SET report_number = ? WHERE id = ?", (new_report_number, entry_id))
+    conn.commit()
+    conn.close()
+
+    await update.message.reply_text(
+        f"✏️ আপডেট করা হয়েছে (ID: {entry_id})\n"
+        f"Vendor: {row[0]}\nBuyer: {row[1]}\n"
+        f"পুরনো Report #: {old_number}\n"
+        f"নতুন Report #: {new_report_number}"
     )
 
 
@@ -231,7 +385,10 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("find", find_report))
+    app.add_handler(CommandHandler("buyer", find_by_buyer))
+    app.add_handler(CommandHandler("number", find_by_number))
     app.add_handler(CommandHandler("add", add_report))
+    app.add_handler(CommandHandler("edit", edit_report))
     app.add_handler(CommandHandler("delete", delete_report))
     app.add_handler(CommandHandler("list", list_reports))
     # কমান্ড নয় এমন যেকোনো লেখা (যেমন "hi", "hello") এলে স্বাগত মেসেজ দেখাবে
