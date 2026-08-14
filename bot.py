@@ -78,7 +78,7 @@ def welcome_text(user_id: int) -> str:
         "👋 <b>Welcome to Touhid's Tracking List!</b>\n"
         "Here you can search for report numbers based on vendor and buyer information.\n\n"
         "━━━━━━━━━━━━━━━\n"
-        "🔎 <b>Commands for Everyone</b>\n"
+        "🔎 <b>How to Use</b>\n"
         "━━━━━━━━━━━━━━━\n\n"
         "1️⃣ <b>Vendor + Buyer search</b>\n"
         "<code>/find vendor | buyer</code>\n"
