@@ -75,35 +75,39 @@ def is_admin(user_id: int) -> bool:
 def welcome_text(user_id: int) -> str:
     """সুন্দরভাবে সাজানো স্বাগত মেসেজ ও ব্যবহারবিধি (HTML ফরম্যাট)"""
     text = (
-        "👋 <b>স্বাগতম!</b>\n"
-        "এই বট দিয়ে Vendor ও Buyer-এর রিপোর্ট নাম্বার খুঁজে পাবেন।\n\n"
+        "👋 <b>Welcome to Touhid's Tracking List!</b>\n"
+        "Here you can search for report numbers based on vendor and buyer information.\n\n"
         "━━━━━━━━━━━━━━━\n"
-        "🔎 <b>সবার জন্য কমান্ড</b>\n"
+        "🔎 <b>Commands for Everyone</b>\n"
         "━━━━━━━━━━━━━━━\n\n"
-        "1️⃣ <b>Vendor + Buyer দিয়ে খোঁজা</b>\n"
+        "1️⃣ <b>Vendor + Buyer search</b>\n"
         "<code>/find vendor | buyer</code>\n"
-        "উদাহরণ:\n<code>/find ABC Textiles | XYZ Buyer</code>\n\n"
-        "2️⃣ <b>শুধু Buyer দিয়ে খোঁজা</b> (vendor অনুযায়ী ভাগ করে দেখাবে)\n"
+        "Example:\n<code>/find ABC Textiles Ltd | Cotton On Group</code>\n\n"
+        "2️⃣ <b>Search by Buyer only</b> (shows results grouped by vendor)\n"
         "<code>/buyer buyer name</code>\n"
-        "উদাহরণ:\n<code>/buyer XYZ Buyer</code>\n\n"
-        "3️⃣ <b>রিপোর্ট নাম্বার দিয়ে ID খোঁজা</b>\n"
-        "<code>/number report number</code>\n"
-        "উদাহরণ:\n<code>/number INT-2026-00123</code>\n"
+        "Example:\n<code>/buyer CELIO</code>\n\n"
+        # "3️⃣ <b>Search by Report Number</b>\n"
+        # "<code>/number report number</code>\n"
+        # "Example:\n<code>/number INT-2026-00123</code>\n"
     )
     if is_admin(user_id):
         text += (
             "\n━━━━━━━━━━━━━━━\n"
-            "👤 <b>শুধু এডমিনের জন্য</b>\n"
+            "👤 <b>Admin Only Commands</b>\n"
             "━━━━━━━━━━━━━━━\n\n"
-            "4️⃣ <b>নতুন এন্ট্রি যোগ করা</b>\n"
+            "3️⃣ <b>Search by Report Number</b>\n"
+            "<code>/number report number</code>\n"
+            "Example:\n<code>/number INT-2026-00123</code>\n"
+            "4️⃣ <b>Add New Entry</b>\n"
             "<code>/add vendor | buyer | report number</code>\n\n"
-            "5️⃣ <b>এন্ট্রি এডিট করা</b> (নতুন রিপোর্ট নাম্বার বসানো)\n"
+            "5️⃣ <b>Edit Entry</b> (update report number)\n"
             "<code>/edit id | new report number</code>\n"
-            "উদাহরণ:\n<code>/edit 5 | INT-2026-00999</code>\n\n"
+            "Example:\n<code>/edit 5 | INT-2026-00999</code>\n\n"
             "6️⃣ <b>এন্ট্রি ডিলিট করা</b>\n"
             "<code>/delete id</code>\n\n"
             "7️⃣ <b>সব এন্ট্রি দেখা</b>\n"
             "<code>/list</code>\n"
+            
         )
     return text
 
@@ -124,17 +128,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== ১. Vendor + Buyer দিয়ে খোঁজা ====================
 
 async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """সবাই ব্যবহার করতে পারবে: /find vendor | buyer"""
+    """Everyone can use: /find vendor | buyer"""
     raw = " ".join(context.args)
     if "|" not in raw:
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/find <vendor> | <buyer>\n\nউদাহরণ:\n/find ABC Textiles | XYZ Buyer Ltd"
+            "Correct format:\n/find <vendor> | <buyer>\n\nExample:\n/find ABC Textiles Ltd | Cotton On Group"
         )
         return
 
     vendor, buyer = [p.strip() for p in raw.split("|", 1)]
     if not vendor or not buyer:
-        await update.message.reply_text("Vendor এবং Buyer দুটোই লিখতে হবে।")
+        await update.message.reply_text("Both Vendor and Buyer are required.")
         return
 
     conn = sqlite3.connect(DB_FILE)
@@ -151,24 +155,24 @@ async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not rows:
         await update.message.reply_text(
-            f"❌ কোনো রিপোর্ট নাম্বার পাওয়া যায়নি।\nVendor: {vendor}\nBuyer: {buyer}"
+            f"❌ No report numbers found.\nVendor: {vendor}\nBuyer: {buyer}"
         )
         return
 
     numbers = "\n".join(f"• {r[0]}" for r in rows)
     await update.message.reply_text(
-        f"✅ Vendor: {vendor}\n✅ Buyer: {buyer}\n\nরিপোর্ট নাম্বার:\n{numbers}"
+        f"✅ Vendor: {vendor}\n✅ Buyer: {buyer}\n\nReport Numbers:\n{numbers}"
     )
 
 
 # ==================== ২. শুধু Buyer দিয়ে খোঁজা (vendor-wise ভাগ করে) ====================
 
 async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """সবাই ব্যবহার করতে পারবে: /b <buyer name>"""
+    """Everyone can use: /b <buyer name>"""
     buyer = " ".join(context.args).strip()
     if not buyer:
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/b <buyer name>\n\nউদাহরণ:\n/b XYZ Buyer Ltd"
+            "Correct format:\n/b <buyer name>\n\nExample:\n/b CELIO"
         )
         return
 
@@ -186,7 +190,7 @@ async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     if not rows:
-        await update.message.reply_text(f"❌ এই Buyer-এর কোনো এন্ট্রি পাওয়া যায়নি।\nBuyer: {buyer}")
+        await update.message.reply_text(f"❌ No entries found for this Buyer.\nBuyer: {buyer}")
         return
 
     # vendor অনুযায়ী গ্রুপ করা
@@ -206,11 +210,11 @@ async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== ৩. রিপোর্ট নাম্বার দিয়ে ID খোঁজা ====================
 
 async def find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """সবাই ব্যবহার করতে পারবে: /number <report number>"""
+    """Everyone can use: /number <report number>"""
     report_number = " ".join(context.args).strip()
     if not report_number:
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/number <report number>\n\nউদাহরণ:\n/number INT-2026-00123"
+            "Correct format:\n/number <report number>\n\nExample:\n/number INT-2026-00123"
         )
         return
 
@@ -227,7 +231,7 @@ async def find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     if not rows:
-        await update.message.reply_text(f"❌ এই রিপোর্ট নাম্বার খুঁজে পাওয়া যায়নি।\nReport #: {report_number}")
+        await update.message.reply_text(f"❌ Report number not found.\nReport #: {report_number}")
         return
 
     lines = [f"✅ Report #: {report_number}\n"]
@@ -240,17 +244,17 @@ async def find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== এডমিন কমান্ড ====================
 
 async def add_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """শুধু এডমিন: /add vendor | buyer | report_number"""
+    """Only Admin: /add vendor | buyer | report_number"""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ এই কমান্ড শুধুমাত্র এডমিনের জন্য।")
+        await update.message.reply_text("⛔ This command is for admins only.")
         return
 
     raw = " ".join(context.args)
     parts = [p.strip() for p in raw.split("|")]
     if len(parts) != 3 or not all(parts):
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/add <vendor> | <buyer> | <report_number>\n\n"
-            "উদাহরণ:\n/add ABC Textiles | XYZ Buyer Ltd | INT-2026-00123"
+            "Correct format:\n/add <vendor> | <buyer> | <report_number>\n\n"
+            "Example:\n/add ABC Textiles | XYZ Buyer Ltd | INT-2026-00123"
         )
         return
 
@@ -271,17 +275,17 @@ async def add_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def edit_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """শুধু এডমিন: /edit <id> | <new_report_number>"""
+    """Only Admin: /edit <id> | <new_report_number>"""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ এই কমান্ড শুধুমাত্র এডমিনের জন্য।")
+        await update.message.reply_text("⛔ This command is for admins only.")
         return
 
     raw = " ".join(context.args)
     parts = [p.strip() for p in raw.split("|")]
     if len(parts) != 2 or not all(parts) or not parts[0].isdigit():
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/edit <id> | <new_report_number>\n\n"
-            "উদাহরণ:\n/edit 5 | INT-2026-00999\n\n"
+            "Correct format:\n/edit <id> | <new_report_number>\n\n"
+            "Example:\n/edit 5 | INT-2026-00999\n\n"
             "(ID জানতে /list অথবা /number ব্যবহার করুন)"
         )
         return
@@ -295,7 +299,7 @@ async def edit_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     row = cur.fetchone()
 
     if not row:
-        await update.message.reply_text(f"❌ ID {entry_id} খুঁজে পাওয়া যায়নি।")
+        await update.message.reply_text(f"❌ ID {entry_id} Not Found.")
         conn.close()
         return
 
@@ -313,13 +317,13 @@ async def edit_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def delete_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """শুধু এডমিন: /delete <id>"""
+    """Only Admin: /delete <id>"""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ এই কমান্ড শুধুমাত্র এডমিনের জন্য।")
+        await update.message.reply_text("⛔ This command is for admins only.")
         return
 
     if not context.args or not context.args[0].isdigit():
-        await update.message.reply_text("সঠিক ফরম্যাটে লিখুন:\n/delete <id>\n\n(ID জানতে /list ব্যবহার করুন)")
+        await update.message.reply_text("Correct format:\n/delete <id>\n\n(ID জানতে /list ব্যবহার করুন)")
         return
 
     entry_id = int(context.args[0])
@@ -329,7 +333,7 @@ async def delete_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     row = cur.fetchone()
 
     if not row:
-        await update.message.reply_text(f"❌ ID {entry_id} খুঁজে পাওয়া যায়নি।")
+        await update.message.reply_text(f"❌ ID {entry_id} Not Found.")
         conn.close()
         return
 
@@ -338,14 +342,14 @@ async def delete_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     await update.message.reply_text(
-        f"🗑️ মুছে ফেলা হয়েছে:\nVendor: {row[0]}\nBuyer: {row[1]}\nReport #: {row[2]}"
+        f"🗑️ Deleted:\nVendor: {row[0]}\nBuyer: {row[1]}\nReport #: {row[2]}"
     )
 
 
 async def list_reports(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """শুধু এডমিন: /list - সব এন্ট্রি দেখায়"""
+    """Only Admin: /list - Shows all entries"""
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("⛔ এই কমান্ড শুধুমাত্র এডমিনের জন্য।")
+        await update.message.reply_text("⛔ This command is for admins only.")
         return
 
     conn = sqlite3.connect(DB_FILE)
@@ -355,7 +359,7 @@ async def list_reports(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     if not rows:
-        await update.message.reply_text("এখনো কোনো এন্ট্রি নেই।")
+        await update.message.reply_text("❌ No entries found.")
         return
 
     lines = [f"#{r[0]} | {r[1]} | {r[2]} | {r[3]}" for r in rows]
