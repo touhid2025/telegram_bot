@@ -13,6 +13,7 @@ import os
 import sqlite3
 import logging
 import asyncio
+import html
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -81,10 +82,10 @@ def welcome_text(user_id: int) -> str:
         "━━━━━━━━━━━━━━━\n\n"
         "1️⃣ <b>Vendor + Buyer দিয়ে খোঁজা</b>\n"
         "<code>/find vendor | buyer</code>\n"
-        "উদাহরণ:\n<code>/find ABC Textiles | CELIO</code>\n\n"
+        "উদাহরণ:\n<code>/find ABC Textiles | XYZ Buyer</code>\n\n"
         "2️⃣ <b>শুধু Buyer দিয়ে খোঁজা</b> (vendor অনুযায়ী ভাগ করে দেখাবে)\n"
-        "<code>/b buyer name</code>\n"
-        "উদাহরণ:\n<code>/b CELIO</code>\n\n"
+        "<code>/buyer buyer name</code>\n"
+        "উদাহরণ:\n<code>/buyer XYZ Buyer</code>\n\n"
         "3️⃣ <b>রিপোর্ট নাম্বার দিয়ে ID খোঁজা</b>\n"
         "<code>/number report number</code>\n"
         "উদাহরণ:\n<code>/number INT-2026-00123</code>\n"
@@ -163,11 +164,11 @@ async def find_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== ২. শুধু Buyer দিয়ে খোঁজা (vendor-wise ভাগ করে) ====================
 
 async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """সবাই ব্যবহার করতে পারবে: /buyer <buyer name>"""
+    """সবাই ব্যবহার করতে পারবে: /b <buyer name>"""
     buyer = " ".join(context.args).strip()
     if not buyer:
         await update.message.reply_text(
-            "সঠিক ফরম্যাটে লিখুন:\n/buyer <buyer name>\n\nউদাহরণ:\n/buyer XYZ Buyer Ltd"
+            "সঠিক ফরম্যাটে লিখুন:\n/b <buyer name>\n\nউদাহরণ:\n/b XYZ Buyer Ltd"
         )
         return
 
@@ -193,13 +194,13 @@ async def find_by_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for vendor, report_number in rows:
         grouped.setdefault(vendor, []).append(report_number)
 
-    lines = [f"✅ Buyer: {buyer}\n"]
+    lines = [f"🔎 <b>Buyer:</b> {html.escape(buyer)}\n"]
     for vendor, numbers in grouped.items():
-        lines.append(f"\n🏭 Vendor: {vendor}")
+        lines.append(f"\n🏭 <b>{html.escape(vendor)}</b>")
         for num in numbers:
-            lines.append(f"   • {num}")
+            lines.append(f"   • <code>{html.escape(num)}</code>")
 
-    await update.message.reply_text("\n".join(lines))
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 # ==================== ৩. রিপোর্ট নাম্বার দিয়ে ID খোঁজা ====================
@@ -378,7 +379,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("find", find_report))
-    app.add_handler(CommandHandler("b", find_by_buyer))
+    app.add_handler(CommandHandler("buyer", find_by_buyer))
     app.add_handler(CommandHandler("number", find_by_number))
     app.add_handler(CommandHandler("add", add_report))
     app.add_handler(CommandHandler("edit", edit_report))
